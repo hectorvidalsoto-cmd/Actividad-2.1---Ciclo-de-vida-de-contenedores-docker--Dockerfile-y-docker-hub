@@ -15,15 +15,28 @@
     el de alpine esta preparado por Alpine Linux, una distribución pequeña que permite reducir el tamaño de la descarga.
 3. Con `docker image inspect httpd:2.4-alpine`, localiza la arquitectura, el puerto que declara (`ExposedPorts`), el proceso principal (`Cmd`), la carpeta de trabajo (`WorkingDir`) y la señal de parada (`StopSignal`). Para obtener un dato concreto puedes usar `--format`, por ejemplo `docker image inspect --format '{{.Config.Cmd}}' httpd:2.4-alpine`.
     ![imagen de respuesta](1.1.3.png)
-    -Arquitectura: amd64
-    -ExposedPorts: 80/tcp
-    -WorkingDir: /usr/local/apache2
-    -StopSignal: SIGWINCH
+    - Arquitectura: amd64
+    - ExposedPorts: 80/tcp
+    - WorkingDir: /usr/local/apache2
+    - StopSignal: SIGWINCH
 
 ### Actividad 1.2: ejecutar y comprobar un servidor web (obligatoria)
 
 1. Crea un contenedor llamado apache-aula, en segundo plano, a partir de httpd:2.4-alpine, publicando su puerto 80 en el puerto 8090 del equipo y solo en la propia VM. Escribe tú la orden y explica cada una de sus partes.
+
+    ![imagen de respuesta](1.2.1.png)
+    - docker run: crear e inicializar contenedor
+    - -d: Segundo plano
+    - --name apache-aula: asignar nombre
+    - -p 127.0.0.1:8090:80: publica un puerto del contenedor hacia el host
+    - httpd:2.4-alpine: imagen desde la que se crea el contenedoor
 2. Comprueba con curl que responde y qué contenido muestra. ¿De qué archivo del contenedor sale ese contenido? (Usa la documentación de la imagen y docker exec para encontrarlo).
+
+    ![imagen de respuesta](1.2.2.png)
+
+```bash
+    docker exec apache-aula cat /usr/local/apache2/htdocs/index.html
+```
 
 ### Actividad 1.3: seguir el ciclo de vida
 
