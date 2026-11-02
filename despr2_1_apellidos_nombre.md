@@ -55,23 +55,57 @@ Completa esta tabla:
 
 | Operación | Estado de apache-aula (STATUS) | ¿Responde curl? | ¿Sigue disponible httpd:2.4-alpine? |
 | --- | --- | --- | --- |
-| Antes de empezar | | | |
-| docker stop apache-aula | | | |
-| docker start apache-aula | | | |
-| docker restart apache-aula | | | |
-| docker rm apache-aula | | | |
-| docker rm -f apache-aula | | | |
+| Antes de empezar | Corriendo | SI | SI |
+| docker stop apache-aula | No esta corriendo | NO | SI |
+| docker start apache-aula | Corriendo | SI | SI |
+| docker restart apache-aula | SI | SI | SI |
+| docker rm apache-aula | Corriendo | Si | SI |
+| docker rm -f apache-aula | No esta corriend | NO | SI |
 
 1. ¿Por qué falla `docker rm apache-aula` y no `docker rm -f apache-aula`?
+
+Porque Docker protege los contenedores en ejecución
 2. ¿Por qué eliminar el contenedor no elimina la imagen?
+
+Porque contenedor e imagen son objetos distintos en Docker, con ciclos de vida independientes:
+
+La imagen (httpd:2.4-alpine) es una plantilla de solo lectura y el contenedor es una instancia en ejecución de esa imagen.
 
 ### Actividad 1.4: cambios dentro de un contenedor
 
 1. Crea un contenedor `apache-cambios` de `httpd:2.4-alpine` publicado en `127.0.0.1:8091`. Con `docker exec`, añade una página `equipo.html` a la carpeta de documentos de Apache con los nombres de tu equipo de trabajo, y compruébala con `curl`.
+
+![imagen de respuesta](1.4.1.png)
 2. Muestra con `docker diff apache-cambios` qué ha cambiado respecto a la imagen.
+
+![imagen de respuesta](1.4.2.png)
 3. Detén y arranca de nuevo el contenedor. ¿Se conserva `equipo.html`? ¿Por qué?
+
+Porque docker stop solo detiene el proceso del contenedor, pero no elimina el contenedor ni su capa de escritura.
+
+![imagen de respuesta](1.4.3.png)
 4. Elimina el contenedor y crea otro con el mismo nombre y la misma imagen. ¿Se conserva? ¿Por qué?
-5. Explica por qué editar un contenedor en marcha no es una forma adecuada de desplegar cambios en una aplicación y cuál sería la forma correcta.
+
+![imagen de respuesta](1.4.4.png)
+
+ Porque al eliminar el contenedor con docker rm, Docker destruye su capa de escritura
+
+1. Explica por qué editar un contenedor en marcha no es una forma adecuada de desplegar cambios en una aplicación y cuál sería la forma correcta.
+
+    Los cambios viven solo en la capa de escritura efímera del contenedor: se pierden al eliminarlo
+
+    La forma correcta seria:
+    - Construir una imagen nueva con un Dockerfile que incluya los cambios (copiar el equipo.html a la carpeta de Apache). Esto es reproducible, versionable y auditable .
+
+    - Usar volúmenes (-v) para los datos que deban persistir y ser modificables sin reconstruir la imagen. Por ejemplo, montar una carpeta del host con el contenido web:
+
+      ```bash
+      docker run -d --name apache-cambios -p 127.0.0.1:8091:80 -v $(pwd)/web:/usr/local/apache2/htdocs/ httpd:2.4-alpine
+      ```
+
+    Así los archivos viven en el host, sobreviven a la eliminación del contenedor y puedes editarlos sin docker exec.
+
+    - Para configuración o datos de aplicación, usar volúmenes nombrados o bind mounts. La imagen se mantiene limpia e inmutable; los datos persisten fuera del ciclo de vida del contenedor.
 
 ### Actividad 1.5: diagnosticar contenedores que se detienen
 
@@ -83,11 +117,24 @@ docker run -d --name diag-2 postgres:17-alpine
 docker run -d --name diag-3 nginx:alpine nginx -g "daemon on;"
 ```
 
-1. Comprueba con docker ps y docker ps -a el estado de cada uno y obtén su código de salida con
-docker inspect -f '{{.State.ExitCode}}' NOMBRE.
-2. Consulta sus logs. Para cada contenedor, explica la causa por la que se ha detenido. En el caso de
-diag-3, compara la orden con el CMD de la imagen de Nginx (docker image inspect): ¿qué hace la
-opción daemon on y por qué detiene el contenedor?
+1. Comprueba con docker ps y docker ps -a el estado de cada uno y obtén su código de salida con docker inspect -f '{{.State.ExitCode}}' NOMBRE.
+
+![imagen de respuesta](1.5.1.png)
+2. Consulta sus logs. Para cada contenedor, explica la causa por la que se ha detenido. En el caso de diag-3, compara la orden con el CMD de la imagen de Nginx (docker image inspect): ¿qué hace la opción daemon on y por qué detiene el contenedor?
+
+![imagen de respuesta](1.5.2.png)
+
+- diag-1 (ubuntu): El contenedor se detuvo porque el proceso bash terminó inmediatamente al no tener una terminal interactiva (-it) a la que conectarse. Al acabar el proceso principal, Docker detiene el contenedor.
+
+- diag-2 (postgres): La imagen de PostgreSQL requiere obligatoriamente la variable de entorno POSTGRES_PASSWORD para inicializarse. Al no proporcionarla en el docker run, el script de arranque aborta y el contenedor se detiene con un código de salida distinto de cero .
+
+- diag-3 (nginx): La causa es que el comando que pasaste (nginx -g "daemon on;") hace que Nginx se ejecute en segundo plano y el proceso que Docker estaba monitorizando (el comando inicial) termine inmediatamente .
+
+Comparacion:
+
+- El CMD de la imagen: La imagen oficial de Nginx está diseñada para ejecutarse en primer plano usando la opción daemon off; . Esto es fundamental en Docker: el contenedor vive mientras su proceso principal (PID 1) esté activo en la terminal. Al mantener Nginx en primer plano, Docker puede monitorizarlo y el contenedor permanece encendido.
+
+- El comando (daemon on;): Al ejecutar docker run ... nginx -g "daemon on;", se sobrescribe el comportamiento por defecto. Le estoy diciendo a Nginx que se separe de la terminal y se ejecute como un servicio en segundo plano (daemon). Como el proceso inicial de Nginx termina después de lanzar el demonio en segundo plano, Docker considera que la tarea ha finalizado y detiene el contenedor, matando también el proceso de Nginx que había quedado en segundo plano .
 
 ## Construir imágenes con Dockerfile
 
