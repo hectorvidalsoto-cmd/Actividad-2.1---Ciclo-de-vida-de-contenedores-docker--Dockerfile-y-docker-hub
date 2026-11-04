@@ -171,34 +171,54 @@ En Node.js, las dependencias se declaran en package.json (como requirements.txt 
 
 Parte A: una web estática con Apache.
 
-1. Crea una carpeta web-apache con una página index.html y una hoja de estilos, y escribe un
-Dockerfile que construya una imagen web-apache:1.0 a partir de httpd:2.4-alpine con esos
-archivos. Consulta en la documentación de la imagen en qué carpeta sirve Apache sus documentos.
-2. Ejecútala y compruébala con curl. Explica por qué este Dockerfile no necesita CMD ni EXPOSE.
+  1. Crea una carpeta web-apache con una página index.html y una hoja de estilos, y escribe un Dockerfile que construya una imagen web-apache:1.0 a partir de httpd:2.4-alpine con esos archivos. Consulta en la documentación de la imagen en qué carpeta sirve Apache sus documentos.
+    Según la documentación oficial de la imagen httpd en Docker Hub, Apache sirve los documentos desde la carpeta /usr/local/apache2/htdocs/
+    ![imagen de respuesta](2.1.1.png)
+
+  2. Ejecútala y compruébala con curl. Explica por qué este Dockerfile no necesita CMD ni EXPOSE.
+    No necesita CMD porque lo hereda de nginx:alpine
+    EXPOSE Es meramente documental. Apache escucha en el puerto 80 por defecto dentro del contenedor; el mapeo real se hace con -p 8080:80 al ejecutar .
 
 Parte B: la aplicación Node.js.
 
-1. Escribe un Dockerfile para saludo que:
-Parta de la imagen node:24-alpine.
-Trabaje en la carpeta /app.
-Instale las dependencias antes de copiar el código, para aprovechar la caché.
-Defina MENSAJE con un valor propio mediante ENV.
-Ejecute la aplicación con el usuario sin privilegios node, que ya existe en la imagen.
-Documente el puerto y arranque la aplicación con CMD en forma exec.
-2. Construye la imagen saludo:1.0, ejecútala y comprueba / y /salud con curl:
+  1. Escribe un Dockerfile para saludo que:
+    Parta de la imagen node:24-alpine.
+    Trabaje en la carpeta /app.
+    Instale las dependencias antes de copiar el código, para aprovechar la caché.
+    Defina MENSAJE con un valor propio mediante ENV.
+    Ejecute la aplicación con el usuario sin privilegios node, que ya existe en la imagen.
+    Documente el puerto y arranque la aplicación con CMD en forma exec.
+    ![imagen de respuesta](2.1.2.png)
+  2. Construye la imagen saludo:1.0, ejecútala y comprueba / y /salud con curl:
 
-    ```bash
+``` bash
     curl http://localhost:3000/
     curl http://localhost:3000/salud
-    ```
+```
 
-3. Comprueba con docker exec el usuario y la carpeta de trabajo del proceso.
+![imagen de respuesta](2.1.3.png)
 
-4. Ejecuta un segundo contenedor cambiando el mensaje y el puerto con -e (MENSAJE y PUERTO), sin
-reconstruir la imagen. ¿Qué tienes que cambiar también en la opción -p? ¿Por qué?
+  3. Comprueba con docker exec el usuario y la carpeta de trabajo del proceso.
 
-5. Indica, para cada instrucción de tu Dockerfile, si actúa durante la construcción, durante la ejecución o
+![imagen de respuesta](2.1.4.png)
+  4. Ejecuta un segundo contenedor cambiando el mensaje y el puerto con -e (MENSAJE y PUERTO), sin reconstruir la imagen. ¿Qué tienes que cambiar también en la opción -p? ¿Por qué?
+    ![imagen de respuesta](2.1.5.png)
+    Debes cambiar el mapeo a -p 4000:8080. La variable PUERTO=8080 hace que la aplicación escuche en el puerto 8080 dentro del contenedor, por lo que el lado derecho de -p (puerto interno) debe coincidir con ese valor. El lado izquierdo (4000) es el puerto del host y puede ser cualquiera libre.
+  5. Indica, para cada instrucción de tu Dockerfile, si actúa durante la construcción, durante la ejecución o
 en ambas.
+
+| Instrucción | Construcción (Build) | Ejecución (Run) |
+| :--- | :---: | :---: |
+| `FROM node:24-alpine` | ✅ | ❌ |
+| `WORKDIR /app` | ✅ | ✅ |
+| `COPY package*.json ./` | ✅ | ❌ |
+| `RUN npm install` | ✅ | ❌ |
+| `COPY . .` | ✅ | ❌ |
+| `ENV MENSAJE="..."` | ✅ | ✅ |
+| `ENV PUERTO=3000` | ✅ | ✅ |
+| `USER node` | ✅ | ✅ |
+| `EXPOSE 3000` | ✅ | ❌ |
+| `CMD ["node", "app.js"]` | ❌ | ✅ |
 
 ### Actividad 2.2: publicar y versionar una imagen
 
