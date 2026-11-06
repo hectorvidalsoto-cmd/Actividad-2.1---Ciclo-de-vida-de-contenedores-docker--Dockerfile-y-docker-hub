@@ -225,7 +225,13 @@ en ambas.
 1. Publica la imagen saludo con la etiqueta 1.0 en tu cuenta de Docker Hub. En la salida de docker
 image push, señala qué capas se subieron y cuáles se reutilizaron (montadas desde otro repositorio), y
 explica por qué.
+![imagen de respuesta](2.2.1.png)
+Pushed: Capas que creé (el código de tu app, package.json, etc.).
+
+Mounted from library/node: Capas de la imagen base node:24-alpine que ya existían en Docker Hub. Docker no las vuelve a subir; las reutiliza desde el repositorio oficial
 2. Elimina todas las copias locales de la imagen, ejecútala a partir de Docker Hub y comprueba con curl
 que responde.
+![imagen de respuesta](2.2.2.png)
 3. Cambia el mensaje por defecto, publica la versión 1.1 y añádele también la etiqueta latest.
 4. Comprueba en la pestaña Tags de Docker Hub la arquitectura de las imágenes publicadas.
+![imagen de respuesta](2.2.3.png)
